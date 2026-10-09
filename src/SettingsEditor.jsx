@@ -2,7 +2,57 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "./components";
 import { EFFECT_IDS, STATE_IDS, STATE_ICONS } from "./i18n";
 
-function StateEditor({ state, profile, t, act, disabled }) {
+function DurationEditor({ state, seconds, t, act, disabled }) {
+  const [draft, setDraft] = useState(String(seconds));
+  useEffect(() => setDraft(String(seconds)), [seconds]);
+  const value = Number(draft);
+  const valid = /^\d+$/.test(draft) && Number.isInteger(value) && value >= 2 && value <= 60;
+  const dirty = !valid || value !== seconds;
+  async function save(duration) {
+    const saved = await act("settings", { state, duration, expected_duration: seconds });
+    if (saved) setDraft(String(saved.durations[state]));
+  }
+  return (
+    <div className="duration-card">
+      <div className="duration-heading">
+        <label htmlFor={`duration-${state}`}>{t("duration_for", { state: t(state) })}</label>
+        <small className={dirty ? "unsaved" : ""}>{t(dirty ? "unsaved" : "saved_label")}</small>
+      </div>
+      <div className="duration-controls">
+        <div className="duration-input">
+          <input
+            id={`duration-${state}`}
+            type="number"
+            min={2}
+            max={60}
+            step={1}
+            value={draft}
+            aria-invalid={!valid}
+            aria-describedby={valid ? "duration-hint" : `duration-error-${state}`}
+            disabled={disabled}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <span>{t("seconds_unit")}</span>
+        </div>
+        <button
+          className="button primary compact"
+          disabled={disabled || !dirty || !valid}
+          aria-label={t("save_duration_for", { state: t(state) })}
+          onClick={() => save(value)}
+        >{t("save")}</button>
+        <button
+          className="button secondary compact"
+          disabled={disabled}
+          aria-label={t("reset_duration_for", { state: t(state) })}
+          onClick={() => save(5)}
+        >{t("reset")}</button>
+      </div>
+      {!valid && <p className="field-error" id={`duration-error-${state}`}>{t("invalid_duration")}</p>}
+    </div>
+  );
+}
+
+function StateEditor({ state, profile, t, act, disabled, onReset }) {
   const [draft, setDraft] = useState(profile);
   useEffect(() => {
     setDraft(profile);
@@ -88,7 +138,10 @@ function StateEditor({ state, profile, t, act, disabled }) {
           aria-label={t("reset_for", { state: t(state) })}
           onClick={async () => {
             const saved = await act("reset_settings", { state });
-            if (saved) setDraft(saved.states[state]);
+            if (saved) {
+              setDraft(saved.states[state]);
+              onReset();
+            }
           }}
         >
           {t("reset")}
@@ -107,6 +160,7 @@ export default function SettingsEditor({
   error,
 }) {
   const [resetEpoch, setResetEpoch] = useState(0);
+  const [stateEpochs, setStateEpochs] = useState({});
   if (!settings) return null;
   return (
     <section className="settings-section" aria-labelledby="settings-title">
@@ -148,8 +202,25 @@ export default function SettingsEditor({
             t={t}
             act={act}
             disabled={!online || Boolean(pending)}
+            onReset={() => setStateEpochs((values) => ({ ...values, [state]: (values[state] || 0) + 1 }))}
           />
         ))}
+      </div>
+      <div className="duration-section">
+        <h3>{t("duration_title")}</h3>
+        <p id="duration-hint">{t("duration_hint")}</p>
+        <div className="duration-grid">
+          {["complete", "error"].map((state) => (
+            <DurationEditor
+              key={`${state}-${resetEpoch}-${stateEpochs[state] || 0}`}
+              state={state}
+              seconds={settings.durations[state]}
+              t={t}
+              act={act}
+              disabled={!online || Boolean(pending)}
+            />
+          ))}
+        </div>
       </div>
       <div className="settings-notes">
         <p>{t("effect_note")}</p>

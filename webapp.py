@@ -93,8 +93,10 @@ class Panel:
     def snapshot(self, client=''):
         now = time.time()
         environment = self.environment()
+        settings, settings_error = bridge.read_preferences()
+        durations = settings['durations']
         with bridge.lock(bridge.RUNTIME / 'sessions.lock'):
-            sessions = bridge.prune(bridge.read_sessions(), now)
+            sessions = bridge.prune(bridge.read_sessions(), now, durations)
         try:
             hardware = json.loads((bridge.RUNTIME / 'status.json').read_text())
         except (FileNotFoundError, ValueError):
@@ -103,12 +105,11 @@ class Panel:
         connected = (environment['keyboard']['wired_count'] == 1 and alive
                      and hardware.get('connected', False) and now - hardware.get('updated_at', 0) < 7)
         control = bridge.read_control()
-        desired, mode, request_id = bridge.desired_light(sessions, control, now)
+        desired, mode, request_id = bridge.desired_light(sessions, control, now, durations)
         last_event = max((r.get('updated', 0) for r in sessions.values()), default=0)
-        settings, settings_error = bridge.read_preferences()
         return {'environment': environment,
                 'settings': settings, 'settings_error': settings_error,
-                'codex': {'state': bridge.aggregate(sessions, now), 'sessions': len(sessions),
+                'codex': {'state': bridge.aggregate(sessions, now, durations), 'sessions': len(sessions),
                           'last_event_at': last_event},
                 'connection': {'verified': bool(connected), 'daemon': alive,
                                'checked_at': hardware.get('updated_at'),
@@ -141,7 +142,8 @@ class Panel:
                 updated = preferences.update(current, data, reset=name == 'reset_settings')
                 bridge.save(bridge.RUNTIME / 'preferences.json', updated)
             # Language changes do not touch the hardware or start its controller.
-            if updated['states'] != current['states']:
+            if (updated['states'] != current['states']
+                    or updated['durations'] != current['durations']):
                 bridge.ensure_daemon()
             return {'settings': updated}
         now = time.time()

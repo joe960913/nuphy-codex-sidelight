@@ -16,7 +16,6 @@ ROOT = Path(__file__).resolve().parent
 RUNTIME = ROOT / 'runtime'
 EVENTS = ('UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest',
           'Stop', 'Interrupt', 'SessionEnd')
-TERMINAL_SECONDS = 15
 ACTIVE_SECONDS = 24 * 60 * 60
 TRANSCRIPTS = Path.home() / '.codex/sessions'
 LIGHT_STATES = {'working': (0, 96, 255), 'waiting': (255, 128, 0),
@@ -39,11 +38,11 @@ def read_control():
             return {}
 
 
-def desired_light(sessions, control, now):
+def desired_light(sessions, control, now, durations=None):
     if (control.get('mode') == 'test' and control.get('expires_at', 0) > now
             and control.get('state') in LIGHT_STATES):
         return control['state'], 'test', control.get('request_id')
-    return aggregate(sessions, now), 'auto', control.get('request_id')
+    return aggregate(sessions, now, durations), 'auto', control.get('request_id')
 
 
 def save(path, data):
@@ -71,10 +70,10 @@ def read_sessions():
         return {}
 
 
-def prune(sessions, now):
+def prune(sessions, now, durations=None):
+    durations = preferences.DEFAULTS['durations'] if durations is None else durations
     return {sid: row for sid, row in sessions.items()
-            if 0 <= now - row['updated'] < (TERMINAL_SECONDS
-                if row['state'] in ('complete', 'error') else ACTIVE_SECONDS)}
+            if 0 <= now - row['updated'] < durations.get(row['state'], ACTIVE_SECONDS)}
 
 
 def transcript_path(value):
@@ -109,7 +108,7 @@ def task_events(path, offset=0):
                                'error': bool(payload.get('error'))})
 
 
-def reconcile(sessions, now):
+def reconcile(sessions, now, durations=None):
     result = {sid: dict(row) for sid, row in sessions.items()}
     for sid, row in list(result.items()):
         path = transcript_path(row.get('transcript_path'))
@@ -128,12 +127,12 @@ def reconcile(sessions, now):
                 row.pop('waiting_for', None)
             elif event['type'] == 'turn_aborted':
                 result.pop(sid, None)
-    return prune(result, now)
+    return prune(result, now, durations)
 
 
-def transition(sessions, event, now):
+def transition(sessions, event, now, durations=None):
     """Store identifiers/state only. Stop is turn completion, not proof of success."""
-    result = prune(sessions, now)
+    result = prune(sessions, now, durations)
     sid = event.get('session_id')
     name = event.get('hook_event_name')
     if not isinstance(sid, str) or not sid or name not in EVENTS:
@@ -177,8 +176,8 @@ def transition(sessions, event, now):
     return result
 
 
-def aggregate(sessions, now):
-    states = {row['state'] for row in prune(sessions, now).values()}
+def aggregate(sessions, now, durations=None):
+    states = {row['state'] for row in prune(sessions, now, durations).values()}
     return next((s for s in ('error', 'waiting', 'working', 'complete') if s in states), 'idle')
 
 
@@ -200,8 +199,9 @@ def hook():
         event = json.load(sys.stdin)
         if not isinstance(event, dict):
             return
+        settings, _ = read_preferences()
         with lock(RUNTIME / 'sessions.lock'):
-            sessions = transition(read_sessions(), event, time.time())
+            sessions = transition(read_sessions(), event, time.time(), settings['durations'])
             save(RUNTIME / 'sessions.json', sessions)
         ensure_daemon()
     except Exception as error:
@@ -235,14 +235,15 @@ def run():
     try:
         while not stopped:
             now = time.time()
+            settings, settings_error = read_preferences()
+            durations = settings['durations']
             with lock(RUNTIME / 'sessions.lock'):
                 before = read_sessions()
-                sessions = reconcile(before, now)
+                sessions = reconcile(before, now, durations)
                 if sessions != before:
                     save(RUNTIME / 'sessions.json', sessions)
             control = read_control()
-            desired, mode, request_id = desired_light(sessions, control, now)
-            settings, settings_error = read_preferences()
+            desired, mode, request_id = desired_light(sessions, control, now, durations)
             profile = settings['states'][desired]
             key = (desired, mode, request_id, profile['color'], profile['effect'])
             ui_alive = control.get('ui_expires_at', 0) > now
@@ -409,9 +410,10 @@ def main():
         ensure_daemon()
         print(json.dumps({'session_id': sid, 'observed_event': latest['type'], 'state': state}))
     elif args.action == 'status':
+        settings, _ = read_preferences()
         with lock(RUNTIME / 'sessions.lock'):
-            sessions = prune(read_sessions(), time.time())
-        print(json.dumps({'aggregate': aggregate(sessions, time.time()),
+            sessions = prune(read_sessions(), time.time(), settings['durations'])
+        print(json.dumps({'aggregate': aggregate(sessions, time.time(), settings['durations']),
                           'sessions': sessions}, indent=2))
     else:
         install(uninstall=args.action == 'uninstall')

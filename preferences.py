@@ -8,6 +8,7 @@ LANGUAGES = ('zh-CN', 'en')
 DEFAULTS = {
     'version': 1,
     'language': 'zh-CN',
+    'durations': {'complete': 5, 'error': 5},
     'states': {
         'working': {'color': '#0060FF', 'effect': 'breathe'},
         'waiting': {'color': '#FF8000', 'effect': 'breathe'},
@@ -26,6 +27,18 @@ class SettingsError(ValueError):
 
 def default_settings():
     return deepcopy(DEFAULTS)
+
+
+def validate_duration(value):
+    if type(value) is not int or not 2 <= value <= 60:
+        raise SettingsError('invalid_duration')
+    return value
+
+
+def validate_durations(values):
+    if not isinstance(values, dict) or set(values) != set(DEFAULTS['durations']):
+        raise SettingsError('invalid_duration')
+    return {state: validate_duration(value) for state, value in values.items()}
 
 
 def validate_profile(profile):
@@ -52,6 +65,8 @@ def load(path):
                 or set(data['states']) != set(DEFAULTS['states'])):
             raise SettingsError('settings_corrupt')
         return {'version': 1, 'language': data['language'],
+                # Older preferences gain the new defaults without losing custom colors.
+                'durations': validate_durations(data.get('durations', DEFAULTS['durations'])),
                 'states': {state: validate_profile(profile) for state, profile in data['states'].items()}}
     except (ValueError, TypeError) as error:
         raise SettingsError('settings_corrupt') from error
@@ -63,8 +78,11 @@ def update(current, data, reset=False):
         state = data.get('state')
         if state is None:
             result['states'] = default_settings()['states']
+            result['durations'] = default_settings()['durations']
         elif isinstance(state, str) and state in result['states']:
             result['states'][state] = deepcopy(DEFAULTS['states'][state])
+            if state in result['durations']:
+                result['durations'][state] = DEFAULTS['durations'][state]
         else:
             raise SettingsError('invalid_state')
         return result
@@ -72,6 +90,15 @@ def update(current, data, reset=False):
         if data['language'] not in LANGUAGES:
             raise SettingsError('invalid_language')
         result['language'] = data['language']
+        return result
+    if set(data) == {'state', 'duration', 'expected_duration'}:
+        state = data['state']
+        if not isinstance(state, str) or state not in result['durations']:
+            raise SettingsError('invalid_state')
+        value = validate_duration(data['duration'])
+        if data['expected_duration'] != result['durations'][state]:
+            raise SettingsError('settings_conflict')
+        result['durations'][state] = value
         return result
     if set(data) != {'state', 'profile', 'expected'}:
         raise SettingsError('invalid_profile')

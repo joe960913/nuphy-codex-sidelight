@@ -29,4 +29,12 @@ test("dynamic status is formatted in the selected language", () => {
     translator("zh-CN")("last_check", { time: "12:00:00" }),
     "最近检测 12:00:00",
   );
+  assert.equal(
+    translator("zh-CN")("desc_complete", { seconds: 5 }),
+    "本轮已经结束，自动模式下保留 5 秒。",
+  );
+  assert.equal(
+    translator("en")("desc_error", { seconds: 12 }),
+    "The task ended with an error. Kept for 12 seconds in automatic mode.",
+  );
 });

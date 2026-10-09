@@ -71,15 +71,17 @@ The first hook event starts the light controller automatically. Once installed, 
 | --- | --- | --- |
 | Working | Blue · Breathe | Codex is thinking or executing tools |
 | Waiting | Orange · Breathe | Approval or a synchronous user reply is needed |
-| Turn ended | Green · Steady, 15 seconds | A turn ended; this is not a guarantee of success |
-| Error | Red · Breathe, 15 seconds | A local task ended with an error |
+| Turn ended | Green · Steady, 5 seconds | A turn ended; this is not a guarantee of success |
+| Error | Red · Breathe, 5 seconds | A local task ended with an error |
 | Idle | Original keyboard effect | No active turn, or the user interrupted it |
 
 Each state supports **Breathe, Steady, Flow, Neon, Rhythm**, or **Original keyboard effect**. Neon cycles its own colors, so it does not use a fixed color. “Wave” is a main-key backlight effect; the sidebar's moving effect is **Flow**. Effects run on the keyboard; the app does not stream animation frames.
 
 Use the color picker or a six-digit HEX value, choose an effect, and click **Save** for that state. Settings can be saved while the keyboard is disconnected. A saved preference and a hardware-confirmed lighting change are separate indicators. Changes to the active state apply when the device is available; other profiles apply when their state becomes active.
 
-**Reset** restores the app's default state profile. **Original keyboard effect** restores the sidelights captured before the controller took over, without factory-resetting the keyboard or changing its main-key backlight. Resetting all state profiles keeps your language preference.
+**Automatic notification duration** lets you set **Turn ended** and **Error** independently, from **2–60 whole seconds**, both defaulting to **5 seconds**. Save each duration separately; it persists across restarts. Timing starts at the lifecycle event and only affects automatic tracking. Test mode keeps the selected state until you switch it, exit, or its page lease expires.
+
+**Reset** in a state row restores its default color, effect, and notification duration. Each duration also has its own reset, which keeps colors and effects. **Original keyboard effect** restores the sidelights captured before the controller took over, without factory-resetting the keyboard or changing its main-key backlight. Resetting all settings keeps your language preference. Existing preferences from earlier versions automatically use five-second durations while preserving saved colors and effects.
 
 Multiple local chats are combined with this priority: **Error → Waiting → Working → Turn ended → Idle**. Test mode temporarily overrides this result. Closing the testing page releases its lease within 20 seconds and resumes automatic tracking. Asynchronous user questions are not treated as persistent waiting, because there is no matching reply hook to clear that state reliably.
 

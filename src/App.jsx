@@ -221,7 +221,7 @@ export default function App() {
               <p>
                 {active && state !== "unavailable"
                   ? t("simulated", { state: t(state) })
-                  : t(`desc_${state}`)}
+                  : t(`desc_${state}`, { seconds: s?.settings?.durations?.[state] ?? 5 })}
               </p>
             </div>
             <Keyboard

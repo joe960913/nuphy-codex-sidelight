@@ -67,8 +67,41 @@ class EventsTests(unittest.TestCase):
 
     def test_completion_expires(self):
         sessions = transition({}, self.event('Stop'), 100)
-        self.assertEqual(aggregate(sessions, 110), 'complete')
-        self.assertEqual(aggregate(sessions, 116), 'idle')
+        self.assertEqual(aggregate(sessions, 104.99), 'complete')
+        self.assertEqual(aggregate(sessions, 105), 'idle')
+
+    def test_error_also_defaults_to_five_seconds(self):
+        sessions = {'one': {'state': 'error', 'updated': 100}}
+        self.assertEqual(aggregate(sessions, 104.99), 'error')
+        self.assertEqual(aggregate(sessions, 105), 'idle')
+
+    def test_independent_durations_survive_event_processing_and_expire_at_boundary(self):
+        durations = {'complete': 12, 'error': 20}
+        sessions = {'one': {'state': 'complete', 'updated': 100, 'turn_id': 'a'},
+                    'two': {'state': 'error', 'updated': 100, 'turn_id': 'b'}}
+        # A later hook and the controller's reconciliation must use the same durations.
+        sessions = transition(sessions, self.event('SessionEnd', 'other'), 108, durations)
+        sessions = reconcile(sessions, 108, durations)
+        self.assertEqual(set(sessions), {'one', 'two'})
+        self.assertEqual(aggregate(sessions, 119.99, durations), 'error')
+        self.assertEqual(aggregate(sessions, 120, durations), 'idle')
+        self.assertEqual(set(bridge.prune(sessions, 112, durations)), {'two'})
+
+    def test_duration_bounds_and_test_mode_override(self):
+        for state in ('complete', 'error'):
+            for duration in (2, 60):
+                durations = dict(preferences.DEFAULTS['durations'], **{state: duration})
+                sessions = {'one': {'state': state, 'updated': 100}}
+                self.assertEqual(aggregate(sessions, 100 + duration - .01, durations), state)
+                self.assertEqual(aggregate(sessions, 100 + duration, durations), 'idle')
+                control = {'mode': 'test', 'state': state, 'expires_at': 200}
+                self.assertEqual(bridge.desired_light(sessions, control, 170, durations)[:2],
+                                 (state, 'test'))
+
+    def test_shortening_duration_expires_an_existing_notification(self):
+        sessions = {'one': {'state': 'complete', 'updated': 100}}
+        self.assertEqual(aggregate(sessions, 108, {'complete': 12, 'error': 5}), 'complete')
+        self.assertEqual(aggregate(sessions, 108, {'complete': 5, 'error': 5}), 'idle')
 
     def test_interruption_and_end_remove_only_their_session(self):
         for event in ('Interrupt', 'SessionEnd'):
@@ -176,6 +209,53 @@ class FakeKeyboard:
         self.current = bytes(state)
         if self.fail:
             raise ProtocolError('simulated lost acknowledgement')
+
+    def close(self):
+        pass
+
+
+class ControllerTimingTests(unittest.TestCase):
+    def test_controller_reads_saved_durations_and_restores_after_each_notification(self):
+        for durations in ({'complete': 5, 'error': 5}, {'complete': 7, 'error': 3}):
+            with self.subTest(durations=durations), tempfile.TemporaryDirectory() as directory:
+                runtime = Path(directory)
+                settings = preferences.default_settings()
+                settings['durations'] = durations
+                bridge.save(runtime / 'preferences.json', settings)
+                bridge.save(runtime / 'sessions.json', {'one': {'state': 'complete', 'updated': 100}})
+                bridge.save(runtime / 'control.json', {'ui_expires_at': 200})
+                keyboard = FakeKeyboard()
+                original = keyboard.state()
+                clock = [100.0]
+                handlers = {}
+                receipts = []
+                real_save = bridge.save
+
+                def save(path, data):
+                    if path.name == 'status.json' and data.get('verified'):
+                        receipt = (data['state'], data['time'])
+                        if not receipts or receipts[-1] != receipt:
+                            receipts.append(receipt)
+                    real_save(path, data)
+
+                def advance(seconds):
+                    clock[0] += seconds
+                    if clock[0] == 110:
+                        real_save(runtime / 'sessions.json', {'two': {'state': 'error', 'updated': 110}})
+                    if clock[0] >= 120:
+                        handlers[bridge.signal.SIGTERM]()
+
+                with patch('bridge.RUNTIME', runtime), patch('nuphy.Keyboard', return_value=keyboard), \
+                        patch('bridge.time.time', side_effect=lambda: clock[0]), \
+                        patch('bridge.time.monotonic', side_effect=lambda: clock[0]), \
+                        patch('bridge.time.sleep', side_effect=advance), \
+                        patch('bridge.signal.signal', side_effect=lambda signum, handler: handlers.update({signum: handler})), \
+                        patch('bridge.save', side_effect=save), patch('builtins.print'):
+                    bridge.run()
+                self.assertEqual(receipts, [('complete', 100), ('idle', 100 + durations['complete']),
+                                            ('error', 110), ('idle', 110 + durations['error'])])
+                self.assertEqual(keyboard.state(), original)
+                self.assertFalse((runtime / 'original-lighting.json').exists())
 
 
 class RecoveryTests(unittest.TestCase):

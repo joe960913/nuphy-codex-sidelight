@@ -110,6 +110,81 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(preferences.load(self.runtime / 'preferences.json')['language'], 'en')
         self.ensure.assert_not_called()
 
+    def test_legacy_preferences_gain_five_seconds_without_changing_colors(self):
+        legacy = preferences.default_settings()
+        legacy.pop('durations')
+        legacy['language'] = 'en'
+        legacy['states']['working'] = {'color': '#A855F7', 'effect': 'flow'}
+        path = self.runtime / 'preferences.json'
+        bridge.save(path, legacy)
+        before = path.read_bytes()
+        migrated = self.panel.snapshot()['settings']
+        self.assertEqual(migrated['durations'], {'complete': 5, 'error': 5})
+        self.assertEqual(migrated['states'], legacy['states'])
+        self.assertEqual(migrated['language'], 'en')
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_durations_persist_independently_and_drive_snapshot_expiry(self):
+        original = preferences.default_settings()
+        self.panel.action('settings', {'state': 'complete', 'duration': 12, 'expected_duration': 5}, 'owner')
+        self.panel.action('settings', {'state': 'error', 'duration': 20, 'expected_duration': 5}, 'owner')
+        stored = preferences.load(self.runtime / 'preferences.json')
+        self.assertEqual(stored['durations'], {'complete': 12, 'error': 20})
+        self.assertEqual(stored['states'], original['states'])
+        with patch.object(webapp.Panel, 'environment', return_value=self.environment), \
+                patch('webapp.time.time', return_value=108):
+            other = webapp.Panel()
+            for state in ('complete', 'error'):
+                bridge.save(self.runtime / 'sessions.json', {'one': {'state': state, 'updated': 100}})
+                snapshot = other.snapshot()
+                self.assertEqual(snapshot['settings']['durations'], stored['durations'])
+                self.assertEqual(snapshot['codex']['state'], state)
+                self.assertEqual(snapshot['test']['state'], state)
+                with patch('webapp.time.time', return_value=100 + stored['durations'][state]):
+                    self.assertEqual(other.snapshot()['codex']['state'], 'idle')
+
+    def test_invalid_or_stale_duration_cannot_overwrite_preferences(self):
+        original = preferences.default_settings()
+        path = self.runtime / 'preferences.json'
+        bridge.save(path, original)
+        for value in (1, 61, 0, -5, 2.5, True, None, '5', []):
+            with self.assertRaisesRegex(preferences.SettingsError, 'invalid_duration'):
+                self.panel.action('settings', {'state': 'complete', 'duration': value,
+                                  'expected_duration': 5}, 'owner')
+            self.assertEqual(preferences.load(path), original)
+        for state in ('working', [], None):
+            with self.assertRaisesRegex(preferences.SettingsError, 'invalid_state'):
+                self.panel.action('settings', {'state': state, 'duration': 10,
+                                  'expected_duration': 5}, 'owner')
+        with self.assertRaisesRegex(preferences.SettingsError, 'settings_conflict'):
+            self.panel.action('settings', {'state': 'error', 'duration': 10,
+                              'expected_duration': 8}, 'owner')
+        self.assertEqual(preferences.load(path), original)
+        self.ensure.assert_not_called()
+
+    def test_reset_durations_preserves_other_state_and_language(self):
+        current = preferences.default_settings()
+        current['language'] = 'en'
+        current['durations'] = {'complete': 12, 'error': 20}
+        bridge.save(self.runtime / 'preferences.json', current)
+        self.panel.action('reset_settings', {'state': 'complete'}, 'owner')
+        result = preferences.load(self.runtime / 'preferences.json')
+        self.assertEqual(result['durations'], {'complete': 5, 'error': 20})
+        self.assertEqual(result['language'], 'en')
+        self.panel.action('reset_settings', {}, 'owner')
+        result = preferences.load(self.runtime / 'preferences.json')
+        self.assertEqual(result['durations'], {'complete': 5, 'error': 5})
+        self.assertEqual(result['language'], 'en')
+
+    def test_corrupt_duration_reports_error_without_overwriting_file(self):
+        current = preferences.default_settings()
+        current['durations']['error'] = 0
+        path = self.runtime / 'preferences.json'
+        bridge.save(path, current)
+        before = path.read_bytes()
+        self.assertEqual(self.panel.snapshot()['settings_error'], 'settings_corrupt')
+        self.assertEqual(path.read_bytes(), before)
+
     def test_reset_one_state_preserves_other_states_and_language(self):
         current = preferences.default_settings()
         current['language'] = 'en'

@@ -85,12 +85,12 @@ export const messages = {
     "Codex is waiting for approval or a synchronous reply.",
   ],
   desc_complete: [
-    "本轮已经结束，自动模式下显示 15 秒。",
-    "The turn has ended. Shown for 15 seconds in automatic mode.",
+    "本轮已经结束，自动模式下保留 {seconds} 秒。",
+    "The turn has ended. Kept for {seconds} seconds in automatic mode.",
   ],
   desc_error: [
-    "任务异常退出，自动模式下显示 15 秒。",
-    "The task ended with an error. Shown for 15 seconds in automatic mode.",
+    "任务异常退出，自动模式下保留 {seconds} 秒。",
+    "The task ended with an error. Kept for {seconds} seconds in automatic mode.",
   ],
   desc_idle: ["当前没有正在执行的任务。", "No task is currently running."],
   desc_unavailable: [
@@ -171,6 +171,17 @@ export const messages = {
   color: ["颜色", "Color"],
   effect: ["灯效", "Effect"],
   actions: ["操作", "Actions"],
+  duration_title: ["自动联动提示时长", "Automatic notification duration"],
+  duration_hint: [
+    "各自默认 5 秒，可设为 2–60 秒，从收到结束或异常事件开始计时。测试模式不受此时长限制。",
+    "Each defaults to 5 seconds. Choose 2–60 seconds, counted from the end or error event. Test mode has no such time limit.",
+  ],
+  duration_for: ["{state}提示时长", "{state} duration"],
+  save_duration_for: ["保存{state}提示时长", "Save {state} duration"],
+  reset_duration_for: ["恢复{state}默认时长", "Reset {state} duration"],
+  seconds_unit: ["秒", "seconds"],
+  duration_saved: ["提示时长已保存，自动联动会使用新时长。", "Duration saved. Automatic tracking will use the new duration."],
+  invalid_duration: ["请输入 2–60 之间的整数秒数。", "Enter a whole number of seconds from 2 to 60."],
   color_for: ["{state}颜色", "{state} color"],
   hex_for: ["{state}颜色 HEX", "{state} HEX color"],
   effect_for: ["{state}灯效", "{state} effect"],
@@ -188,12 +199,12 @@ export const messages = {
     "Flow is the moving sidelight effect; Wave belongs to the key backlight. Rhythm uses the keyboard’s built-in effect.",
   ],
   defaults_note: [
-    "恢复默认会重置本应用的状态配色与灯效；“键盘原灯效”会恢复接管前的侧灯设置。",
-    "Reset restores this app’s default state colors and effects. Original keyboard effect restores the sidelights captured before control began.",
+    "状态行的恢复默认会重置该状态的配色、灯效与提示时长；“键盘原灯效”会恢复接管前的侧灯设置。",
+    "Reset in a state row restores its default color, effect, and duration. Original keyboard effect restores the sidelights captured before control began.",
   ],
   persist_note: [
-    "颜色、灯效和语言都保存在这台电脑，重启后仍然保留。",
-    "Colors, effects, and language are saved on this computer and survive restarts.",
+    "颜色、灯效、提示时长和语言都保存在这台电脑，重启后仍然保留。",
+    "Colors, effects, durations, and language are saved on this computer and survive restarts.",
   ],
   probe_ok: [
     "连接测试通过，已收到键盘的灯光回读。",
@@ -216,8 +227,8 @@ export const messages = {
     "Saved locally. Applies when the keyboard reconnects.",
   ],
   settings_reset: [
-    "已恢复默认配色和灯效，并保存到本机。",
-    "Default colors and effects restored and saved locally.",
+    "已恢复默认设置，并保存到本机。",
+    "Default settings restored and saved locally.",
   ],
   language_saved: ["已保存语言偏好。", "Language preference saved."],
   service_offline: [
@@ -266,8 +277,8 @@ export const messages = {
   ],
   invalid_language: ["请选择中文或 English。", "Choose Chinese or English."],
   settings_conflict: [
-    "这个状态已在其他页面更新，已加载最新值，请重新编辑。",
-    "This state changed in another page. The latest values are loaded; edit again.",
+    "此设置已在其他页面更新，已加载最新值，请重新编辑。",
+    "This setting changed in another page. The latest values are loaded; edit again.",
   ],
   settings_corrupt: [
     "无法读取已存设置。当前使用默认值；可点“恢复全部默认”修复。",

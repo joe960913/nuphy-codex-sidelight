@@ -70,7 +70,9 @@ export function usePanel() {
               ? "settings_reset"
               : data.language
                 ? "language_saved"
-                : snapshot?.connection.verified
+                : data.duration !== undefined
+                  ? "duration_saved"
+                  : snapshot?.connection.verified
                   ? "settings_saved"
                   : "settings_saved_offline",
         });
