@@ -1,22 +1,20 @@
 # NuPhy Codex Sidelight
 
-**Give Codex a little glow.**
+**Codex status, on your keyboard.**
 
-Give Codex a task. Switch windows. Let the two little light bars on your keyboard keep you in the loop.
+Turn the sidelights on your NuPhy Air75 V3 into a visible part of your Codex workflow. While another window has your attention, a glance at the keyboard shows whether Codex is working, waiting for input, or has ended a turn.
 
-Your NuPhy Air75 V3 already knows how to glow. Now it can tell you something, too.
+A local React control panel handles connection checks, lighting previews, and custom colors, effects, and notification durations.
 
 [中文说明](README.zh-CN.md) · [MIT license](LICENSE)
 
-🔵 Working on it. &nbsp; 🟠 Your turn. &nbsp; 🟢 Turn ended. &nbsp; 🔴 Something went wrong.
-
-![Pick a color, try an effect, and let your NuPhy follow Codex](docs/images/preview.jpg)
+![NuPhy Codex Sidelight control panel: connection checks, live status, and lighting settings](docs/images/preview.jpg)
 
 ## Quick start
 
-### Give Codex one more task: the setup
+### Set up with Codex
 
-If you happen to have a **Mac, Codex, and a NuPhy Air75 V3 (ANSI)**, you have the ingredients. Connect the keyboard by **USB in wired mode**, paste this into a **local Codex chat**, and let Codex help set up its own status lights:
+If you have a **Mac, Codex, and a NuPhy Air75 V3 (ANSI)**, paste the following into a **local Codex chat** to have Codex help with installation and configuration. Connect the keyboard by **USB and switch to wired mode** before testing:
 
 ```text
 Read this repository and help me install and configure NuPhy Codex Sidelight on this Mac:
@@ -34,10 +32,10 @@ and help me verify it with a new local Codex turn.
 Tell me what was verified and whether anything still needs my attention.
 ```
 
-Stock firmware works. No flashing, extra account, or API key needed. The project runs locally, with a React panel for the fun bits: picking colors, trying effects, and watching the lights respond.
+The integration uses stock firmware and runs locally. It requires no firmware flashing, additional account, or API key.
 
 <details>
-<summary>Prefer doing it yourself? Manual setup</summary>
+<summary>Manual installation and hook configuration</summary>
 
 You need Node.js **24+**, Python **3.11+**, and a USB data cable. Local Codex with [Hooks support](https://learn.chatgpt.com/docs/hooks) is required for automatic tracking; you can test the keyboard before enabling the hooks.
 
@@ -72,29 +70,29 @@ The first hook event starts the light controller automatically. Once installed, 
 
 </details>
 
-## Your lights, your rules
+## States and customization
 
-Purple Flow while Codex works? Red Rhythm when something breaks? Pick a color and effect for each state, hit **Save**, and make it yours.
+Each state has its own color and effect. For example, you can replace the default blue breathing effect with purple Flow for active work, while keeping the other states unchanged.
 
-- **Five native effects to play with:** Breathe, Steady, Flow, Neon, and Rhythm. Or bring back the keyboard's original look.
-- **Two little five-second nudges:** turn endings and errors each default to **5 seconds**, independently adjustable from **2–60 seconds**.
-- **A test mode for the curious:** try every state on the actual keyboard, then return to following Codex.
-- **English or 中文:** colors, effects, timing, and language all stay saved. Reset whenever you want a fresh start.
+- **Native lighting effects:** Breathe, Steady, Flow, Neon, Rhythm, or the original keyboard effect.
+- **Independent notification durations:** turn endings and errors each default to **5 seconds**, configurable from **2–60 seconds**.
+- **Hardware test mode:** preview each state on the keyboard, then resume automatic tracking.
+- **English and Chinese UI:** colors, effects, durations, and language persist across restarts, with controls to restore defaults.
 
-Here is what you get out of the box:
+Default state mapping:
 
 | State | Default lights | Meaning |
 | --- | --- | --- |
-| 🔵 Working | Blue · Breathe | “Working on it.” |
-| 🟠 Waiting | Orange · Breathe | “A little help here?” — approval or a synchronous reply |
-| 🟢 Turn ended | Green · Steady, 5 seconds | “Over to you.” — this turn has ended |
-| 🔴 Error | Red · Breathe, 5 seconds | “That didn't go as planned.” |
-| ⚪ Idle | Original keyboard effect | Back to your keyboard's usual look |
+| Working | Blue · Breathe | Codex is thinking or executing tools |
+| Waiting | Orange · Breathe | Approval or a synchronous user reply is needed |
+| Turn ended | Green · Steady, 5 seconds | The current turn has ended |
+| Error | Red · Breathe, 5 seconds | A local task ended with an error |
+| Idle | Original keyboard effect | No active turn, or the user interrupted it |
 
-The green light means a turn ended. Reviewing the result is still your part of the collaboration.
+Green indicates a turn ending, not a guarantee of task correctness or passing tests.
 
 <details>
-<summary>The finer details: effects, timers, resets, and multiple chats</summary>
+<summary>Effect behavior, timing, resets, and multiple chats</summary>
 
 Each state supports **Breathe, Steady, Flow, Neon, Rhythm**, or **Original keyboard effect**. Neon cycles its own colors, so it does not use a fixed color. “Wave” is a main-key backlight effect; the sidebar's moving effect is **Flow**. Effects run on the keyboard; the app does not stream animation frames.
 
@@ -108,12 +106,12 @@ Multiple local chats are combined with this priority: **Error → Waiting → Wo
 
 </details>
 
-## A small project, with a few practical notes
+## Compatibility and technical notes
 
 Currently verified on **macOS + NuPhy Air75 V3 ANSI + stock firmware + wired USB**. Both light bars act as one zone. Other NuPhy models, ISO layouts, wireless connections, Windows, and Linux are not supported by this release.
 
 <details>
-<summary>What stays on your Mac, and how to restore your lights</summary>
+<summary>Local data, backups, and lighting recovery</summary>
 
 The server listens only on `127.0.0.1`. The app has no cloud backend and does not upload keyboard or chat data. It retains only lifecycle metadata: session/turn identifiers, timestamps, event/tool names, and local transcript paths/read positions. It reads lifecycle records from connected local Codex transcripts to recover task endings that arrive without a `Stop` hook; it does not retain chat text, tool arguments, or tool responses.
 
@@ -138,7 +136,7 @@ Do not delete the recovery snapshot before restoring. If settings are damaged, t
 </details>
 
 <details>
-<summary>Want to tinker? Development and local tests</summary>
+<summary>Development and local tests</summary>
 
 Keep `npm start` running for the local backend. In a second terminal, run `npm run dev` and open the Vite URL. Rebuild with `npm run build` to update the regular console.
 
@@ -167,7 +165,7 @@ The tests run locally without a connected keyboard. They cover protocol rejectio
 
 </details>
 
-## A little glow, thanks to a few good projects
+## Acknowledgments
 
 - [OpenAI Hooks documentation](https://learn.chatgpt.com/docs/hooks) — lifecycle events and user-controlled trust.
 - [kbvu protocol research](https://github.com/pda/kbvu/blob/main/docs/keyboard-protocol.md) and [N Agent Bridge protocol notes](https://github.com/bohu8264/N-Agent-Bridge/blob/main/docs/HID-PROTOCOL.md) — Air75 V3 protocol references.
