@@ -1,0 +1,29 @@
+{
+  "name": "nuphy-codex-sidelight",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Show Codex status on NuPhy Air75 V3 sidelights with a local React control panel.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joe960913/nuphy-codex-sidelight.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "start": ".venv/bin/python webapp.py",
+    "test": ".venv/bin/python -m unittest -v && node --test src/i18n.test.js"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.4"
+  }
+}
