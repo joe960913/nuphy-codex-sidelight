@@ -19,6 +19,21 @@ Let your keyboard lights follow Codex. A local React control panel that turns th
 
 ## Quick start
 
+### Let Codex set it up
+
+If you happen to have a **Mac, Codex, and a NuPhy Air75 V3 (ANSI)**, paste the following into a local Codex chat and let it handle the setup:
+
+```text
+Read this repository and help me install and configure NuPhy Codex Sidelight on this Mac:
+https://github.com/joe960913/nuphy-codex-sidelight
+
+I use Codex and a NuPhy Air75 V3 (ANSI). Check the requirements, clone the project into a stable local directory, install dependencies, build and start the control panel, and configure the Codex hooks. Preserve my existing hooks and settings.
+
+Let me know when I need to connect the USB cable, switch to wired mode, or personally review and trust the hooks. Open the control panel, verify the keyboard connection through lighting readback, and test each light state. Then restore automatic tracking and help me verify it with a new local Codex turn. Tell me what was verified and whether anything still needs my attention.
+```
+
+### Manual setup
+
 You need Node.js **24+**, Python **3.11+**, and a USB data cable. Local Codex with [Hooks support](https://learn.chatgpt.com/docs/hooks) is required for automatic tracking; you can test the keyboard before enabling the hooks.
 
 ```sh

@@ -19,6 +19,21 @@
 
 ## 开始使用
 
+### 让 Codex 帮你配置
+
+如果你恰好拥有 **Mac、Codex 和 NuPhy Air75 V3（ANSI）**，把下面这段话发给本地 Codex，让它帮你完成配置：
+
+```text
+请阅读这个仓库，帮我在这台 Mac 上安装并配置 NuPhy Codex Sidelight：
+https://github.com/joe960913/nuphy-codex-sidelight
+
+我使用 Codex 和 NuPhy Air75 V3（ANSI）。请检查环境要求，把项目克隆到一个固定的本地目录，安装依赖、构建并启动控制台，配置 Codex Hooks，同时保留我已有的 Hook 和设置。
+
+需要我连接 USB 数据线、切换有线模式或亲自审核并信任 Hook 时，请提示我完成。最后打开控制台，通过灯光回读确认键盘连接，逐个测试状态灯，再恢复自动联动，并引导我用一轮新的本地 Codex 对话验证。告诉我哪些项目已验证，以及是否还有需要我处理的事项。
+```
+
+### 手动安装
+
 需要 Node.js **24+**、Python **3.11+** 和 USB 数据线。自动联动需要支持 [Hooks](https://learn.chatgpt.com/docs/hooks) 的本地 Codex；可以先测试键盘，再开启联动。
 
 ```sh
